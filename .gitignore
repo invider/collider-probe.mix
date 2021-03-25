@@ -1,0 +1,10 @@
+
+
+# collider
+.meta.cache
+dist
+*.out
+*.zip
+*.tar
+*.tgz
+

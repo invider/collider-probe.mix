@@ -10,12 +10,12 @@ function setup() {
             'two',
             'three',
         ],
-        onSelect(item, i) {
+        onSelect(menu, item, i) {
             log('selected #' + i + ': ' + item)
 
             switch(i) {
                 case 2:
-                    this.selectFrom({
+                    menu.selectFrom({
                         items: [
                             {
                                 name: 'option-1',
@@ -29,13 +29,17 @@ function setup() {
                                     log('aciton on option 2')
                                 },
                             },
+                            'option-3',
+                            'option-4',
                         ],
+                        onSelect(item, i) {
+                            log('another select: ' + item)
+                        },
                     })
                     break
             }
         },
-
-        showBackground: false,
     })
-    lab.control.player.bindAll(menu)
+
+    menu.show()
 }

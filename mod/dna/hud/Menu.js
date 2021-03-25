@@ -12,6 +12,19 @@ const df = {
     IDLE: 20,
 }
 
+const defaultColors = {
+    main:     hsl(.55, .1, .9),
+    selected: hsl(.12, .5, .5),
+    disabled: hsl(.55, .05, .25),
+    section:  hsl(.55, .05, .4),
+}
+
+const defaultItems = [
+    'provide',
+    'items list',
+    'for the constructor',
+]
+
 function isSwitch(item) {
     return isArray(item)
 }
@@ -23,23 +36,29 @@ function isOption(item) {
 class Menu {
 
     constructor(st) {
-        this.syncTheme()
-        augment(this, df)
-        augment(this, st)
+        this.color = defaultColors
+        this.items = defaultItems
+        this.handlers = {}
+        augment(this, df, st)
+        this.normalizeItems()
     }
 
-    syncTheme() {
-        // need to setup manually,
-        // since colors are not available on df{} creation
-        this.background = env.style.color.c1
-        this.color = {
-            main: env.style.color.c3, 
-            bcolor: env.style.color.c0, 
-            scolor: env.style.color.c2,
-            acolor: env.style.color.c0, 
-            dcolor: env.style.color.c1,
-            bacolor: env.style.color.c3, 
-        }
+    normalizeItems() {
+        if (!this.items) throw 'no menu items found!'
+        this.items.forEach((item, i) => {
+            if (isString(item)) {
+                this.item = {
+                    __: this,
+                    name: item,
+                }
+            } else {
+                this.item.__ = this
+                if (item.init) {
+                    item.init(this)
+                }
+            }
+        })
+        this.items.current = 0
     }
 
     show() {
@@ -148,13 +167,19 @@ class Menu {
 
     select() {
         const item = this.currentItem()
-        if (isSwitch(item) || isOption(item)) {
+
+        if (item.action) {
+            item.action(this)
+            //sfx.play('use', env.mixer.level.apply)
+        } else if (isSwitch(item) || isOption(item)) {
             this.right()
         } else {
-            if (this.onSelect) {
-                this.onSelect(item, this.current)
-                //sfx.play('use', env.mixer.level.apply)
+            if (this.handlers.onSelect) {
+                this.handlers.onSelect(this, item, this.current)
+            } else if (this.onSelect) {
+                this.onSelect(this, item, this.current)
             }
+            //sfx.play('use', env.mixer.level.apply)
         }
     }
 
@@ -180,6 +205,28 @@ class Menu {
     focusOn(name) {
         const i = this.items.indexOf(name)
         if (i >= 0) this.current = i
+    }
+
+    currentItem() {
+        return this.items[this.current]
+    }
+
+    selectedValue(i) {
+        const item = this.items[i]
+        if (isString(item)) return item
+        else if (isArray(item)) {
+            return item[item.current]
+        }
+    }
+
+    evo(dt) {
+        if (this.state === DISABLED) return
+
+        const idle = (Date.now() - this.lastTouch)/1000
+        if (this.onIdle && idle >= this.IDLE) {
+            this.onIdle()
+            this.lastTouch = Date.now()
+        }
     }
 
     draw() {
@@ -223,40 +270,13 @@ class Menu {
             }
 
             if (!hidden) {
-                // backline
-                if (i === this.current) fill(this.color.bacolor)
-                else fill(this.color.bcolor)
-                rect(rx+b, y-1, rw-2*b, this.step-2)
-
-                if (!active) fill(this.color.scolor)
-                else if (disabled) fill(this.color.dcolor)
-                else if (i === this.current) fill(this.color.acolor)
+                if (!active) fill(this.color.section)
+                else if (disabled) fill(this.color.disabled)
+                else if (i === this.current) fill(this.color.selected)
                 else fill(this.color.main)
                 text(item, x, y)
                 y += this.step
             }
-        }
-    }
-
-    currentItem() {
-        return this.items[this.current]
-    }
-
-    selectedValue(i) {
-        const item = this.items[i]
-        if (isString(item)) return item
-        else if (isArray(item)) {
-            return item[item.current]
-        }
-    }
-
-    evo(dt) {
-        if (this.state === DISABLED) return
-
-        const idle = (Date.now() - this.lastTouch)/1000
-        if (this.onIdle && idle >= this.IDLE) {
-            this.onIdle()
-            this.lastTouch = Date.now()
         }
     }
 }
